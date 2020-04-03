@@ -316,8 +316,8 @@ class agent_resnet50_pose_online(BaseAgent):
             batch_start = time.time()
 
             if self.cuda:
-                x = x.to(device=self.device, dtype=torch.float)
-                y = y.to(device=self.device, dtype=torch.float)
+                x = x.to(device=self.device, dtype=torch.long)
+                y = y.to(device=self.device, dtype=torch.long)
 
             progress = float(self.current_epoch * self.data_loader.train_iterations + current_batch) / (
                     self.config.max_epoch * self.data_loader.train_iterations)
@@ -330,7 +330,7 @@ class agent_resnet50_pose_online(BaseAgent):
             pred = self.model(x)
 
             if self.config.data_output_type == "joints_absolute":
-                loss_joints = self.loss(pred, y)
+                loss_joints = self.loss(pred.double(), y.double())
                 total_loss = loss_joints
                 train_loss.update(total_loss.item())
                 train_err_joints.update(total_loss.item())
@@ -374,7 +374,7 @@ class agent_resnet50_pose_online(BaseAgent):
 
                 # total_loss = penalty_loss + loss_rotation + loss_translation
                 # use simple loss
-                total_loss = self.loss(pred, y)
+                total_loss = self.loss(pred.double(), y.double())
 
                 # calc translation MSE
                 q_pred = pq.Quaternion(rotation[0].cpu().detach().numpy())
@@ -392,7 +392,7 @@ class agent_resnet50_pose_online(BaseAgent):
                 indices = torch.tensor([3, 4, 5, 6])
                 indices = indices.to(self.device)
                 rotation = torch.index_select(pred, 1, indices)
-                # select rotation indices from the label tensor
+                # select rotation indices from the label tensorub
                 y_rot = torch.index_select(y, 1, indices)
 
                 q_pred = pq.Quaternion(rotation[0].cpu().detach().numpy())
@@ -416,7 +416,7 @@ class agent_resnet50_pose_online(BaseAgent):
                 trans_list.append(loss_translation.item())
 
                 # use simple loss
-                total_loss = self.loss(pred, y)
+                total_loss = self.loss(pred.double(), y.double())
 
                 # calc translation MSE
                 mse_trans = (np.square(trans_pred - trans_label)).mean()
@@ -424,7 +424,7 @@ class agent_resnet50_pose_online(BaseAgent):
                 train_err_rotation.update(q_dist)
 
             elif self.config.data_output_type == "joints_relative":
-                total_loss = self.loss(pred, y)
+                total_loss = self.loss(pred.double(), y.double())
                 train_err_joints.update(total_loss.item())
                 # print("Train loss {:f}".format(total_loss.item()))
                 joint_list.append(total_loss.item())
