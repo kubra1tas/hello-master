@@ -1,5 +1,7 @@
 import csv
 from scipy import io
+
+import rosbag
 import numpy as np
 import h5py as h5
 import matplotlib.pyplot as plt
@@ -12,15 +14,12 @@ import pyquaternion as pq
 import transformation
 import time
 import cv2
-from sensor_msgs.msg import Image
 from cv_bridge import CvBridge, CvBridgeError
 import datetime
 from random import randrange
-import rosbag
-from std_msgs.msg import Int32, String
 
-filename = '/home/kub/Downloads/rosbag_converter/step_and_shoot.bag'
-rosbag_dir = "/home/kub/Downloads/rosbag_converter/step_and_shoot.bag"
+filename = '/home/speerponar/rosbag_converter/step_and_shoot.bag'
+rosbag_dir = "/home/speerponar/rosbag_converter/step_and_shoot.bag"
 
 # sensor_msgs::JointState
 t_rob6_joints = "/rob6_joints"
@@ -38,6 +37,7 @@ t_pico_pointcloud = "/royale_camera_driver/point_cloud"
 t_atracsys_head = "/trk_head_tf"
 # rt_msgs::TransformRTStampedWithHeader
 t_atracsys_coil = "/trk_coil_tf"
+
 
 def save_topics(group, msg_topic, msg):
 	debug = False
@@ -175,6 +175,7 @@ def save_topics(group, msg_topic, msg):
 
 		rob6_tf = np.asarray(tf)
 		group.create_dataset("trk_coil_tf", data=atracsys_coil, compression="gzip", compression_opts=9)
+
 def save_topics_clean(group, msg_topic, msg):
 	bridge = CvBridge()
 	if msg_topic == t_rob6_joints:
@@ -209,9 +210,11 @@ def save_topics_clean(group, msg_topic, msg):
 		# print(q)
 		# print(r_list)
 		group.create_dataset("rotation", data=r_list, compression="gzip", compression_opts=9)
+
 def ros_to_h5():
 	sample = 0
-
+	d1 = np.random.random(size=(100, 33))
+	d2 = "this is a string"
 
 	array = [1, 2, 3]
 	out_array = np.asarray(array)
@@ -226,8 +229,8 @@ def ros_to_h5():
 	trk_head_tf = np.zeros(7)
 	trk_coil_tf = np.zeros(7)
 
-	hf_train = h5.File('kub_train.h5', 'w')
-	hf_val = h5.File('kub_val.h5', 'w')
+	hf_train = h5.File('dataset_v6_train.h5', 'w')
+	hf_val = h5.File('dataset_v6_val.h5', 'w')
 
 	# estimate number of messages in bag file
 	msg_count = 0
@@ -302,14 +305,16 @@ def ros_to_h5():
 			hf_val.close()
 	except rosbag.bag.ROSBagException as err:
 		print(err.value)
+
+
 def read_h5():
-	path = "/home/kub/Downloads/masterthesis-master/kub_train.h5"
+	path = "/home/speerponar/rosbag_converter/dataset_clean_v3_2020-04-07 21:45:31.465430.h5"
 	# path = "./dataset_val_v4.h5"
 	# d = DatasetFromHdf5.DatasetFromHdf5(path)
 	# print(len(d))
 	hf = h5.File(path, "r")
 	# for i in hf.items():
-	# 	print(i, i.keys())
+	#     print(i, i.keys())
 	# print("key", k)
 
 	total_items = len(hf.items())
@@ -320,33 +325,35 @@ def read_h5():
 		random_samples.append(randrange(total_items))
 
 	images = []
-	count = 0
-	for i in hf.items():
-		print(i[0])
-		group = hf.get(i[0])
-		gray = np.array(group.get("gray"))
-		img = PIL_Image.fromarray(gray)
-		img = img.rotate(90)
-		plt.imshow(img)
-		plt.pause(0.01)
-		plt.savefig("img_" + str(i[0]) + ".svg", format="svg", dpi=600)
-		if count > 25:
-			break
-		else:
-			count += 1
+	# count = 0
+	# for i in hf.items():
+	# 	print(i[0])
+	# 	group = hf.get(i[0])
+	# 	gray = np.array(group.get("gray"))
+	# 	img = PIL_Image.fromarray(gray)
+	# 	img = img.rotate(90)
+	# 	plt.imshow(img)
+	# 	plt.pause(0.01)
+	# 	plt.savefig("img_" + str(i[0]) + ".svg", format="svg", dpi=600)
+	# 	if count > 25:
+	# 		break
+	# 	else:
+	# 		count += 1
 
 	for j, i in enumerate(random_samples):
 		group = hf.get("sample" + str(i))
-		#images.append(np.array(group.get("gray")))
-		#gray = np.array(group.get("gray"))
+		images.append(np.array(group.get("gray")))
+		gray = np.array(group.get("gray"))
 		img = PIL_Image.fromarray(gray)
 		img = img.rotate(90)
 		fig = plt.imshow(img)
 		plt.axis("off")
 		fig.axes.get_xaxis().set_visible(False)
 		fig.axes.get_yaxis().set_visible(False)
-		plt.pause(0.001)
+		# plt.pause(0.001)
 		plt.savefig("img_gray_" + str(i) + ".svg", format="svg", dpi=600, bbox_inches="tight", pad_inches=0)
+
+
 # print(images[0])
 # width = images[0].shape[0]
 # height = images[0].shape[1]
@@ -464,6 +471,7 @@ def create_dataset(bag_filename, mode):
 	# uncomment from here
 	# calculate L2 norm matrix of translations
 
+	'''''''''
 	dist_trans = np.zeros((size, size))
 	print(dist_trans)
 
@@ -477,13 +485,11 @@ def create_dataset(bag_filename, mode):
 			dist_trans[i, j] = l2
 	print(dist_trans)
 	sio.savemat(mode + "_dist_trans_v3.mat", {"dist_trans": dist_trans})
-
-
-
-
+	
+	'''''''''''
 	## uncomment the block above if you want to creat a dist_trans.mat file.
 	dist_quat = np.zeros((size, size))
-	#print(rotations)
+	print(rotations)
 
 	print("Start calculating rotational distance")
 
@@ -493,77 +499,67 @@ def create_dataset(bag_filename, mode):
 	# calc the rotational distance between quaternions
 	for i, item_i in enumerate(rotations):
 		for j, item_j in enumerate(rotations):
-			for t in range(0,10):
-				t = transformation.Transformation(config=None)
-				# print(item_i)
-				# print(item_j)
-				# print(np.asarray(item_i))
-				rot_dist = t.quaternion_distance(item_i, item_j)[1]
-				dist_quat[i, j] = rot_dist
-				break
-			break
+			t = transformation.Transformation(config=None)
+			# print(item_i)
+			# print(item_j)
+			# print(np.asarray(item_i))
+			rot_dist = t.quaternion_distance(item_i, item_j)[0]
+			dist_quat[i, j] = rot_dist
 		if i % 10 == 0:
 			duration = time.time() - start
 			remaining_time = total_sec - duration
 			# print(
 			# 	i, j, rot_dist, "{:2.2%}".format(float(i) / j),
 			# 	time.strftime("%H:%M:%S", time.gmtime(remaining_time)))
-			'''''''''
 			print("Combinations {:d} {:d} Rot-Dist: {:f} Progress {:2.1%} Remaining Time {:s}".format(i, j, rot_dist,
 			                                                                                          float(i) / j,
 			                                                                                          time.strftime(
 				                                                                                          "%H:%M:%S",
 				                                                                                          time.gmtime(
 					                                                                                          remaining_time))))
-	#print(dist_quat)
-	'''''
-	sio.savemat(mode + "_dist_quat_v2.mat", {"dist_quat": dist_quat})
+	print(dist_quat)
+	sio.savemat(mode + "_dist_quat_v3.mat", {"dist_quat": dist_quat})
+
 def create_relative_dataset(file_dir, mode):
 	# read h5 file
-	hf = h5.File(file_dir, "r")
-	total_items = int(len(hf.items())*0.01)
-	print("Total Items", total_items)
+	hf = h5.File('test_val_clean.h5', "r")
+	total_items = len(hf.items())
+	# print("Total Items", total_items)
 
 	translations = np.zeros((total_items, 3))
 	rotations = np.zeros((total_items, 4))
 	sample = 0
-	count = 0
+
 	for i in hf.items():
-		for j in range(0,total_items):
-			print(i)
-			group = hf.get(i[0])
-			# print(group)
-			translation = np.array(group.get("translation"))
-			translation = translation[0]
-			#print(translation[0], len(translations[sample]))
-			# print(translation)
-			count = count +1
-			# get translation vector
-			t = np.zeros((1, 3))
-			t[0, 0] = translation[0]
-			t[0, 1] = translation[1]
-			t[0, 2] = translation[2]
-			print(len(t), count)
-			translations[sample] = t
+		group = hf.get(i[0])
+		trs = np.array(group.get("translation"))
+		translation = trs[0]
 
-			# get the quaternion rotation from rotation
-			rotation = np.array(group.get("rotation"))
-			q = np.zeros((1, 4))
-			q[0, 0] = rotation[0]
-			q[0, 1] = rotation[1]
-			q[0, 2] = rotation[2]
-			q[0, 3] = rotation[3]
-			a = pq.Quaternion(q[0])
-			q = a.normalised
-			# print(q)
-			rotations[sample, 0] = q[0]
-			rotations[sample, 1] = q[1]
-			rotations[sample, 2] = q[2]
-			rotations[sample, 3] = q[3]
-			sample = sample + 1
-		break
+		# print(translation)
 
+		# get translation vector
+		t = np.zeros((1, 3))
 
+		t[0, 0] = translation[0]
+		t[0, 1] = translation[1]
+		t[0, 2] = translation[2]
+		translations[sample] = t
+
+		# get the quaternion rotation from rotation
+		rotation = np.array(group.get("rotation"))
+		q = np.zeros((1, 4))
+		q[0, 0] = rotation[0]
+		q[0, 1] = rotation[1]
+		q[0, 2] = rotation[2]
+		q[0, 3] = rotation[3]
+		a = pq.Quaternion(q[0])
+		q = a.normalised
+		# print(q)
+		rotations[sample, 0] = q[0]
+		rotations[sample, 1] = q[1]
+		rotations[sample, 2] = q[2]
+		rotations[sample, 3] = q[3]
+		sample = sample + 1
 
 	# calc all translations
 	# calculate L2 norm matrix of translations
@@ -571,38 +567,35 @@ def create_relative_dataset(file_dir, mode):
 
 	print("Start calculating Translation Distance")
 
-
 	for i, item_i in enumerate(translations):
 		for j, item_j in enumerate(translations):
 			l2 = math.sqrt(
 				(item_i[0] - item_j[0]) ** 2 + (item_i[1] - item_j[1]) ** 2 + (item_i[2] - item_j[2]) ** 2)
-			print("Translation Progress {:5.1%} Distance Rot: {:5.2f}".format((float(len(translations))*len(translations)), l2))
+			# print("Translation Progress {:5.1%} Distance Rot: {:5.2f}".format((float(len(translations))*len(translations)), l2))
 			dist_trans[i, j] = l2
 	# print(dist_trans)
 	file_name = mode + "_" + file_dir.split(".")[0] + "_" + "translation"+".mat"
 	sio.savemat(file_name, {"dist_trans": dist_trans})
 	## uncomment the block above if you want to creat a dist_trans.mat file.
 	dist_quat = np.zeros((total_items, total_items))
-	print(rotations)
+	# print(rotations)
 
 	print("Translation Finished")
 
-
 	print("Start calculating rotational distance")
 
-	total_sec = 10000
-	speed = 100
+	# total_sec = 10000
+	# speed = 100
 	start = time.time()
 	duration = 0
 	# calc the rotational distance between quaternions
 	for i, item_i in enumerate(rotations):
 		for j, item_j in enumerate(rotations):
-			speed_start = time.time()
+			# speed_start = time.time()
 			t = transformation.Transformation(config=None)
-			#print(item_i)
-			#print(item_j)
-			#print(np.asarray(item_i))
-			print(item_i, item_j)
+			# print(item_i)
+			# print(item_j)
+			# print(np.asarray(item_i))
 			rot_dist = t.quaternion_distance(item_i, item_j)[0]
 			dist_quat[i, j] = rot_dist
 			# speed = time.time() - speed_start
@@ -622,9 +615,12 @@ def create_relative_dataset(file_dir, mode):
 						                                                                                    duration))))
 	# print(dist_quat)
 	file_name = mode + "_" + file_dir.split(".")[0] + "_" + "rotation"+".mat"
-	#sio.savemat(file_name, {"dist_quat": dist_quat})
+	sio.savemat(file_name, {"dist_quat": dist_quat})
 
 	print("Rotation Finished")
+
+
+
 def test_numpy():
 	total = np.zeros((4, 3))
 	l = np.array([1, 2, 3])
@@ -636,17 +632,23 @@ def test_numpy():
 	print(total[0])
 	# total = np.insert(total, 1, l)
 	print(total)
+
+
 def plot_heatmap():
-	t = sio.loadmat("train_dist_quat_v2.mat")
+	t = sio.loadmat("/home/speerponar/rosbag_converter/train_dist_quat_v3.mat")
 	data = t["dist_quat"]
 	print(np.shape(data))
 	print(data)
-	im = plt.imshow(data, cmap='hot', interpolation='nearest')
-	plt.colorbar(im)
-	plt.title("Translational Distance Heatmap")
-	plt.show()
+
+
+# im = plt.imshow(data, cmap='hot', interpolation='nearest')
+# plt.colorbar(im)
+# plt.title("Translational Distance Heatmap")
+# plt.show()
+
+
 def plot_surface():
-	t = sio.loadmat("train_result_t5_r5_v7.mat")
+	t = sio.loadmat("result.mat")
 	data = t["result"]
 	print(np.shape(data))
 	print(data)
@@ -663,6 +665,8 @@ def plot_surface():
 	ax.set_zlabel('Z Label')
 
 	plt.show()
+
+
 def test_poseloss():
 	pred = np.array([[1.2308e+01, -8.3917e+00, 1.4943e+01, -2.4882e-05, 5.8604e-01,
 	                  -4.7962e-01, 6.6435e-01]])
@@ -688,6 +692,8 @@ def test_poseloss():
 	t = transformation.Transformation(config=None)
 	print(t.quaternion_distance(a, b)[1])
 	print(t.quaternion_distance(a.normalised, b.normalised)[1])
+
+
 def test_quaternions():
 	a = [-0.00435228, -0.00435228, -0.00435228, -0.00435228]
 	b = [-0.01940142, -0.01940142, -0.01940142, -0.01940142]
@@ -699,11 +705,13 @@ def test_quaternions():
 	print(y.normalised)
 	t = transformation.Transformation(config=None)
 	print(t.quaternion_distance(x.normalised, y.normalised))
-def filter_translation(dir_file, t=40, binary=True):
+
+
+def filter_translation(dir_file, t, binary = False):
 	file = sio.loadmat(dir_file)
 	trans = file["dist_trans"]
 	trans_filtered = np.zeros(np.shape(trans))
-
+	print("Trans filtered :",trans_filtered)
 	for x in range(np.shape(trans)[0]):
 		for y in range(np.shape(trans)[1]):
 			# print(trans[x, y])
@@ -718,7 +726,9 @@ def filter_translation(dir_file, t=40, binary=True):
 	# plt.title("Translational Distance Filtered")
 	# plt.show()
 	return trans_filtered
-def filter_rotation(dir_file, r=40, binary=True):
+
+
+def filter_rotation(dir_file, r, binary = True):
 	file = sio.loadmat(dir_file)
 	rot = file["dist_quat"]
 	rot_filtered = np.zeros(np.shape(rot))
@@ -738,10 +748,9 @@ def filter_rotation(dir_file, r=40, binary=True):
 	# plt.show()
 
 	return rot_filtered
+
+
 def merge_distance_matrices(filter_trans, filter_rot, dir_trans, dir_rot, mode):
-
-	#train_result mat dosyasi olusturuluyor
-
 	print("Loaded file {:s}".format(dir_trans))
 	print("Loaded file {:s}".format(dir_rot))
 	# filter translations under 4 mm
@@ -750,10 +759,10 @@ def merge_distance_matrices(filter_trans, filter_rot, dir_trans, dir_rot, mode):
 	b = filter_rotation(dir_file=dir_rot, r=filter_rot)
 
 	res = np.multiply(a, b)
+	print(a,b,res)
 	total_combinations = np.size(res)
 	total_filtered = np.count_nonzero(res)
-	print("a:",a, "b:", b,"total combinations:", total_combinations, "total filtered:",total_filtered)
-	#print("Filtered {:2.2%}".format(float(total_filtered) / total_combinations))
+	print("Filtered {:2.2%}".format(float(total_filtered) / total_combinations))
 	file_name = mode+"_"+"result_t{:d}_r{:d}_v7".format(filter_trans, filter_rot)
 	sio.savemat(file_name+".mat", {"result": res})
 
@@ -765,12 +774,16 @@ def merge_distance_matrices(filter_trans, filter_rot, dir_trans, dir_rot, mode):
 	# plt.show()
 	plt.savefig(file_name+".svg".format(filter_trans, filter_rot), dpi=1200, format="svg")
 	print("Saved svg file")
+
+
 def analyse_data():
-	d = sio.loadmat("train_result_t5_r5_v7.mat")
+	d = sio.loadmat("result.mat")
 	data = d["result"]
 	print(np.size(data))
 	print("Non Zeros Entries: ", np.count_nonzero(data))
 	print("Allowed Neighbors {:3.2f} %".format(float(np.count_nonzero(data)) / np.size(data) * 100))
+
+
 def load_bagfile():
 	# load rosbag file
 	# estimate number of messages in bag file
@@ -897,6 +910,7 @@ def load_bagfile():
 	print("Finished Loading")
 	print("Loaded {} samples".format(len(bag_data)))
 	return bag_data
+
 def generate_dataset_train_val(ros_bag_dir, name_train, name_val, percent_train_use=0.8, clean=False):
 	width = 224
 	height = 171
@@ -916,10 +930,10 @@ def generate_dataset_train_val(ros_bag_dir, name_train, name_val, percent_train_
 
 	# load the first 80 % into train set
 	split_ratio = percent_train_use
-	# train_size = math.ceil(msg_count / 7.0 * split_ratio)
+	train_size = math.ceil(msg_count / 7.0 * split_ratio)
 	# load the last 20 % into val set
-	# val_size = math.ceil(msg_count / 7.0 - train_size)
-	# print("Train: {} Val: {}".format(train_size, val_size))
+	val_size = math.ceil(msg_count / 7.0 - train_size)
+	print("Train: {} Val: {}".format(train_size, val_size))
 
 	sample = 0
 	count = 1
@@ -943,7 +957,7 @@ def generate_dataset_train_val(ros_bag_dir, name_train, name_val, percent_train_
 							float(sample) / (msg_count / topic_count))))
 
 				mod = int((1-split_ratio)**(-1))
-				if not sample % mod == 0 or clean == True:
+				if not sample % mod == 0 or clean == False:
 					if group_name in hf_train and count == topic_count:
 						# print("Train {:d} {:d}".format(sample, sample % mod))
 						count = 0
@@ -974,7 +988,7 @@ def generate_dataset_train_val(ros_bag_dir, name_train, name_val, percent_train_
 
 def generate_dataset():
 	# load result.mat file
-	f_neighbor = sio.loadmat("train_result_t5_r5_v7.mat")
+	f_neighbor = sio.loadmat("result.mat")
 	neighbors_mat = f_neighbor["result"]
 
 	# load rosbag file
@@ -986,10 +1000,10 @@ def generate_dataset():
 	# print(data[-1])
 
 	print(len(neighbors_mat))
-	# print(len(neighbors_mat[0]))
+	print(len(neighbors_mat[0]))
 	start = time.time()
 	max = len(data)
-	path = "test_train_clean.h5"
+	path = "dataset_train_pose_v1.h5"
 	dataset_h5_train = h5.File(path, "w")
 	sample = 0
 	for x, dim0 in enumerate(neighbors_mat):
@@ -1028,8 +1042,10 @@ def generate_dataset():
 
 	dataset_h5_train.close()
 	print("Dataset successfully created {}".format(path))
+
+
 def parser_new():
-	filename = '/home/kub/Downloads/rosbag_converter/step_and_shoot.bag'
+	filename = '/home/Brendes/catkin_ws/src/step_and_shoot/logs/test_004.bag'
 	t_pico_gray = "/royale_camera_driver/depth_image"
 	width = 224
 	height = 171
@@ -1057,6 +1073,7 @@ def parser_new():
 		# plt.pause(0.01)
 	except rosbag.bag.ROSBagException as err:
 		print(err.value)
+
 def test_convert_mat_to_list(result_mat, target_csv):
     # file_mat = "/home/Brendes/rosbag_converter/result_t4_r2.mat"
     d = io.loadmat(result_mat)
@@ -1093,37 +1110,41 @@ def test_convert_mat_to_list(result_mat, target_csv):
 
 
 if __name__ == "__main__":
-
-	#parser_new()
-	#ros_to_h5()
-	#read_h5()
-	#plot_heatmap()
-
-	#load_bagfile()
-	#generate_dataset()
-	#create_dataset('step_and_shoot.bag', mode ="train" ) #dist_quat mtri olusturuluyor
-
-	#merge_distance_matrices()
-
-
+	# parser_new()
+	# ros_to_h5()
+	# read_h5()
+	# test_numpy()
+	# plot_heatmap()
+	# test_poseloss()
+	# test_quaternions()
+	# filter_translation()
+	# filter_rotation()
+	# plot_surface()
+	# analyse_data()
+	# load_bagfile()
+	# generate_dataset()
+	# create_dataset()
+	# test_multiplication()
 
 
 	## read rosbag file into h5
-	#ros_to_h5()
-	#generate_dataset_train_val(ros_bag_dir=rosbag_dir, name_train="kub_train.h5", name_val="kub_val.h5", clean=True)
+	# ros_to_h5()
+	generate_dataset_train_val(ros_bag_dir=rosbag_dir, name_train="test_train_clean.h5", name_val="test_val_clean.h5", clean=True)
 
-	# calc relative neighbor matrices
-	#val = "kub_val.h5"
-	#create_relative_dataset(file_dir=val, mode="val")
-	#train = "kub_train.h5"
-	#create_relative_dataset(file_dir=train, mode="train")
+	## calc relative neighbor matrices
+	val = "test_val_clean.h5"
+	create_relative_dataset(file_dir=val, mode="val")
+
+	train = "test_train_clean.h5"
+	create_relative_dataset(file_dir=train, mode="train")
 
 	## merge the two val_dist_quat and val_dist_trans matrices
-	# merge_distance_matrices(filter_trans=5, filter_rot=5, dir_trans="val_test_val_translation.mat", dir_rot="val_test_val_rotation.mat", mode="val")
-	#merge_distance_matrices(filter_trans=5, filter_rot=5, dir_trans="val_kub_val_translation.mat", dir_rot="val_kub_val_rotation.mat" , mode="train")
+	merge_distance_matrices(filter_trans=50, filter_rot=50, dir_trans="val_test_val_clean_translation.mat", dir_rot="val_test_val_clean_rotation.mat", mode="val")
+	merge_distance_matrices(filter_trans=50, filter_rot=50, dir_trans="train_test_train_clean_translation.mat", dir_rot="train_test_train_clean_rotation.mat" , mode="train")
 
 	## convert the result mat lists into a csv file
-	#test_convert_mat_to_list(result_mat="val_result_t5_r5_v7.mat", target_csv="val_result_t5_r5_v7.csv")
-	#test_convert_mat_to_list(result_mat="train_result_t5_r5_v7.mat", target_csv="train_result_t5_r5_v7.csv")
+	# test_convert_mat_to_list(result_mat="val_result_t5_r5_v7.mat", target_csv="val_result_t5_r5_v7.csv")
+	# test_convert_mat_to_list(result_mat="train_result_t5_r5_v7.mat", target_csv="train_result_t5_r5_v7.csv")
 
-	merge_distance_matrices(filter_trans=40, filter_rot=40, dir_trans= "train_dist_trans_v3.mat", dir_rot= "train_dist_quat_v2.mat", mode = "train")
+	# load_bagfile()
+	# create_dataset('step_and_shoot.bag', mode = 'train') once train ve val dos.i olustur, sonra merge matrices
