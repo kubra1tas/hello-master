@@ -93,12 +93,12 @@ class agent_resnet50_pose_online(BaseAgent):
             torch.manual_seed(self.manual_seed)
             self.logger.info("Program will run on *****CPU*****\n")
 
-        self.model = self.model.to(self.device)
+        self.model = self.model.to(self.device).double()
         self.loss = self.loss.to(self.device)
         # Model Loading from the latest checkpoint if not found start from scratch.
         self.load_checkpoint(self.config.checkpoint_file)
         # Summary Writer
-        self.summary_writer = None
+        self.summary_writer = True
 
         # print summary of model
         # summary(self.model.model, (1, 224, 224))
@@ -327,10 +327,11 @@ class agent_resnet50_pose_online(BaseAgent):
                                       nBatch=self.data_loader.train_iterations)
 
             # model
-            pred = self.model(x)
+
+            pred = self.model((x))
 
             if self.config.data_output_type == "joints_absolute":
-                loss_joints = self.loss(pred.double(), y.double())
+                loss_joints = self.loss(pred, y)
                 total_loss = loss_joints
                 train_loss.update(total_loss.item())
                 train_err_joints.update(total_loss.item())
@@ -392,7 +393,7 @@ class agent_resnet50_pose_online(BaseAgent):
                 indices = torch.tensor([3, 4, 5, 6])
                 indices = indices.to(self.device)
                 rotation = torch.index_select(pred, 1, indices)
-                # select rotation indices from the label tensorub
+                # select rotation indices from the label tensor
                 y_rot = torch.index_select(y, 1, indices)
 
                 q_pred = pq.Quaternion(rotation[0].cpu().detach().numpy())
@@ -416,7 +417,7 @@ class agent_resnet50_pose_online(BaseAgent):
                 trans_list.append(loss_translation.item())
 
                 # use simple loss
-                total_loss = self.loss(pred.double(), y.double())
+                total_loss = self.loss(pred, y)
 
                 # calc translation MSE
                 mse_trans = (np.square(trans_pred - trans_label)).mean()
@@ -424,7 +425,7 @@ class agent_resnet50_pose_online(BaseAgent):
                 train_err_rotation.update(q_dist)
 
             elif self.config.data_output_type == "joints_relative":
-                total_loss = self.loss(pred.double(), y.double())
+                total_loss = self.loss(pred, y)
                 train_err_joints.update(total_loss.item())
                 # print("Train loss {:f}".format(total_loss.item()))
                 joint_list.append(total_loss.item())
@@ -528,7 +529,7 @@ class agent_resnet50_pose_online(BaseAgent):
 
         ds = pd.DataFrame(np_batch_bench)
         print(ds)
-        path = "/home/Brendes/pytorch_models/evaluation/"
+        path = "/home/speerponar/pytorch_models/evaluation/"
         ds.to_csv(path+"test_"+str(self.config.batch_size)+"w_"+str(self.config.data_loader_workers)+".csv")
         print("Save csv file")
 
@@ -558,7 +559,7 @@ class agent_resnet50_pose_online(BaseAgent):
                     y = y.to(device=self.device, dtype=torch.float)
 
                 # model
-                pred = self.model(x.type(torch.cuda.FloatTensor))
+                pred = self.model(x.type(torch.FloatTensor))
 
                 if self.config.data_output_type == "joints_absolute":
                     loss_joints = self.loss(pred, y)
